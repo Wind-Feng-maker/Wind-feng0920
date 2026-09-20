@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Convergent Web Matrix - Pro Update</title>
+    <!-- 三维核心渲染开源基础驱动库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        /* === 整体纯虚空基础架构设置 === */
+        * { box-sizing: border-box; }
+        body, html { 
+            margin: 0; padding: 0; overflow: hidden; background-color: #030408; 
+            font-family: -apple-system, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; user-select: none; 
+        }
+        #webgl-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
+
+        /* === 极客信息展现面板(左上主介绍面板) === */
+        #matrix-dashboard {
+            position: absolute; top: 38px; left: 38px; z-index: 10; pointer-events: none;
+            width: 380px; padding-left: 20px; border-left: 3px solid rgba(255, 112, 32, 0.9);
+            text-shadow: 0px 4px 15px rgba(0,0,0,1);
+            transition: opacity 0.5s ease; opacity: 1;
+        }
+        .meta-sup-text { color: #8e9cac; font-size: 0.65rem; letter-spacing: 2.5px; font-weight: 700; text-transform: uppercase; margin-bottom: 6px; }
+        #sys-name { margin: 0 0 10px 0; color: #ffebcc; font-size: 1.85rem; font-weight: 800; letter-spacing: 0.5px;}
+        #sys-desc { color: #bbc4ce; font-size: 0.9rem; line-height: 1.5; font-weight: 300; opacity: 0.9;}
+
+        /* === ★ 显著优化的: 全息形态识别小灯状态栏(右上侧) === */
+        .sync-lights-box {
+            position: absolute; top: 35px; right: 40px; display: flex; gap: 15px; z-index: 10; pointer-events: none;
+            background: rgba(15, 18, 25, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); 
+            backdrop-filter: blur(8px); padding: 12px 18px; border-radius: 30px; box-shadow: 0 5px 25px rgba(0,0,0,0.5);
+        }
+        .s-lamp {
+            width: 10px; height: 10px; border-radius: 50%;
+            border: 1px solid rgba(255,255,255, 0.3); opacity: 0.25; /* 熄灭时发黑隐灰透带一点自身特质色 */
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: scale(0.85); /* 橡皮软弹过渡缓行效果！ */
+        }
+        /* 一号赤橙芯,二号量紫青,三号灵海蓝 (带极光溢出投影效果)*/
+        .s-lamp:nth-child(1).lamp-on { background: #ff3344; box-shadow: 0 0 16px #ff3344; border-color: #ff3344; opacity: 1; transform: scale(1.15);}
+        .s-lamp:nth-child(2).lamp-on { background: #00ff73; box-shadow: 0 0 16px #00ff73; border-color: #00ff73; opacity: 1; transform: scale(1.15);}
+        .s-lamp:nth-child(3).lamp-on { background: #1a8cff; box-shadow: 0 0 16px #1a8cff; border-color: #1a8cff; opacity: 1; transform: scale(1.15);}
+
+
+        /* === 中央底置全局遥感掌控器操控栏 === */
+        .bottom-action-layer { position: absolute; bottom: 35px; width: 100vw; text-align: center; z-index: 10; pointer-events: none;}
+        #action-notify-p { 
+            color: rgba(180, 195, 210, 0.85); font-size: 0.86rem; margin-bottom: 22px; 
+            letter-spacing: 2px; text-shadow: 0px 2px 5px rgba(0,0,0,0.9);
+            animation: pulseHint 2s infinite ease-in-out;
+        }
+        @keyframes pulseHint { 0%, 100%{opacity: 0.7} 50%{opacity: 1; text-shadow: 0px 0px 8px rgba(180, 200, 255, 0.8);} }
+
+        .button-bar { display: flex; justify-content: center; gap: 18px; pointer-events: auto;}
+        .glass-btn {
+            background-color: rgba(22, 24, 30, 0.6); border: 1px solid rgba(130, 150, 190, 0.2); 
+            border-radius: 8px; color: #ced7df; padding: 12px 28px; font-size: 0.9rem; letter-spacing: 0.5px;
+            cursor: pointer; backdrop-filter: blur(5px); box-shadow: 0px 4px 12px rgba(0,0,0,0.4);
+            transition: all 0.25s ease-out;
+        }
+        .glass-btn:hover { background-color: rgba(45, 55, 80, 0.7); border: 1px solid rgba(255, 255, 255, 0.5); color: #fff;}
+        .glass-btn:active{ transform: scale(0.95) translateY(2px); box-shadow: 0px 1px 4px rgba(0,0,0,0.4);}
+        .glass-btn.active-mode { color: #1edb82; border-color: rgba(30, 219, 130, 0.4);}
+
+    </style>
+</head>
+<body>
+
+    <div id="matrix-dashboard">
+        <div class="meta-sup-text">A Convergent Web Matrix</div>
+        <h1 id="sys-name">...</h1>
+        <div id="sys-desc">...</div>
+    </div>
+    
+    <!-- 全新的小指示晶灯排列组。分别带有ID精准锚定位与CSS类结合改变颜色形态 -->
+    <div class="sync-lights-box">
+        <div id="lamp-0" class="s-lamp"></div>
+        <div id="lamp-1" class="s-lamp"></div>
+        <div id="lamp-2" class="s-lamp"></div>
+    </div>
+
+    <div class="bottom-action-layer">
+        <!-- 修改了此处的提示文字 -->
+        <div id="action-notify-p">点击任意处触发量子震荡波纹</div>
+        <div class="button-bar">
+            <button class="glass-btn" id="ctrl-shape">Next Shape</button>
+            <!-- 激活时用彩色字体展示提示状态清晰无界 -->
+            <button class="glass-btn active-mode" id="ctrl-spin">Auto Spin: ON</button>
+            <button class="glass-btn" id="ctrl-view">Reset View</button>
+        </div>
+    </div>
+
+    <!-- WebGL核心驱动大本基地盘位层 -->
+    <div id="webgl-canvas"></div>
+
+    <script>
+        // ====== I. 参数矩阵系统（文本配图数据预留组）======
+        const GRAPH_ARCHIVES = [
+            { name: "Cosmic Neural Mandala",  desc: "A nested sphere system capturing holographic neural activity, cycling dynamic frequencies from warm matrices into deep cosmic resonances.", },
+            { name: "Quantum Gyroid Lattice", desc: "An intricate 3D gyroidal connection network transferring multi-layered quantum data state flows through non-euclidean space topology." },
+            { name: "Celestial Trefoil Multiverse", desc: "A continuous interlocking orbital matrix synchronized in an elegant 3D Trefoil-Knot formulation, representing multi-dimensional timeline loops." }
+        ];
+
+        let stateGlobalModelIndex = 0; //主导航图索形状态记存录位 
+        let engineIsAutoSpinOn = true; //记录世界全旋核心的开关判定挂挡。
+
+        // ====== II. 设置引擎的三维世界根视网和材质相机等宏基本建设组！=======
+        const MAX_TOTAL_NODES = 750;     //星海悬挂散播极量点量。量刚好满足神仙画连体画
+        const WIRE_CONNECT_THRESHOLD = 26; 
+
+        const renderingSceneBoxDivBaseEnvCtnContainerRefDocDomXObjG = document.getElementById('webgl-canvas');
+        const universeEngineCoreTheSceneRoot= new THREE.Scene();
+        universeEngineCoreTheSceneRoot.fog = new THREE.FogExp2(0x030408, 0.0012); 
+
+        const TheMainScreenVisionViewCameraEngineObjectBaseToSeeVTypeObjTTargetTheTypePointAObjView= new THREE.PerspectiveCamera( 48, window.innerWidth / window.innerHeight, 1, 3500 );
+        TheMainScreenVisionViewCameraEngineObjectBaseToSeeVTypeObjTTargetTheTypePointAObjView.position.set(0, 48, 260);
+
+        const worldFrameGenRendererCanvasCoreXOp = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
+        worldFrameGenRendererCanvasCoreXOp.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
+        worldFrameGenRendererCanvasCoreXOp.setSize( window.innerWidth, window.innerHeight );
+        renderingSceneBoxDivBaseEnvCtnContainerRefDocDomXObjG.appendChild(worldFrameGenRendererCanvasCoreXOp.domElement);
+
+        const DragPanMouseKeyboardVisionWatchSysUserOperateCamOrbitRefObjInstCtT = new THREE.OrbitControls(TheMainScreenVisionViewCameraEngineObjectBaseToSeeVTypeObjTTargetTheTypePointAObjView, worldFrameGenRendererCanvasCoreXOp.domElement);
+        DragPanMouseKeyboardVisionWatchSysUserOperateCamOrbitRefObjInstCtT.enableDamping = true; DragPanMouseKeyboardVisionWatchSysUserOperateCamOrbitRefObjInstCtT.dampingFactor = 0.045;
+        // ※彻底移除并干掉它本身视角不稳健不独立的自动走时圈组件！ ！！！  交权给我自身转挂组件!!  ※
+
+        
+        // ====== III. 全点源图网络线系和点原宿星渲染池及存放库系统！ =========
+        const WorldCenterSelfRotatingMasterCoreGravityCoreNodeWrapRefGroupA3DGInstB = new THREE.Group();
+        universeEngineCoreTheSceneRoot.add(WorldCenterSelfRotatingMasterCoreGravityCoreNodeWrapRefGroupA3DGInstB); //它会承担无阻干拢公转法主核 任务!!。
+
+        // Float单3精度阵列可被底端硬显图形芯片读取极其极限的高运行流走阵池！！ ===!!:-- !-- --==== 
+        const FloatArMNodeXyzRenderNowArrayPtsGenValStoreBaseValTStoreInCAr  = new Float32Array(MAX_TOTAL_NODES * 3); 
+        const FloatArMNodeXyzTrgetWantGoArrayMemRefGTypePtsRefForMorphVHold    = new Float32Array(MAX_TOTAL_NODES * 3);  
+        const FloatArColorCorePointHoloBrightValRefHolderCArForC= new Float32Array(MAX_TOTAL_NODES * 3); 
+
+        const FloatArrayForHoloWhiteFibersLinesWiresPositionsMemoryRefGThisAllocSizeCapArrayPntMaxToCap= new Float32Array(18000 * 6);
+        const FloatArrayColorGenMemoryHolderStoreArrayRefHoleFibersLinesArrayColorDataSArrayBVarListGen = new Float32Array(18000 * 6);
+        
+        let nodesPointCloudGeometryDataGraphicWrapperStore;
+        let LinesGrapicStoreMemRefBaseNodeObject;
+
+
+        // -- 利用极微观内含纯光图圈制作代替丑正方形颗粒点特效 --。  -- ====== !!!: ==== --  ! ======= ! ---==== :: 
+        function CraftCircularSoftLightStarFlareShapeRendererAlphaPatternTextureSysObjGFunctionCMap(){
+            let ctxCtnRResCanDomBaseThis= document.createElement('canvas'); ctxCtnRResCanDomBaseThis.width=64; ctxCtnRResCanDomBaseThis.height=64;
+            let painterCTXGenToolCallTheOOfDomMCanVVal= ctxCtnRResCanDomBaseThis.getContext('2d');
+            let colorHoloGlowGradEffectTInRadialFormValRingDrawValRTypeInst = painterCTXGenToolCallTheOOfDomMCanVVal.createRadialGradient(32,32,0, 32,32,32);
+            colorHoloGlowGradEffectTInRadialFormValRingDrawValRTypeInst.addColorStop(0,  'rgba(255, 255, 255, 1)'); 
+            colorHoloGlowGradEffectTInRadialFormValRingDrawValRTypeInst.addColorStop(0.2, 'rgba(230, 240, 255, 0.7)'); 
+            colorHoloGlowGradEffectTInRadialFormValRingDrawValRTypeInst.addColorStop(0.7, 'rgba(230, 240, 255, 0.05)'); 
+            colorHoloGlowGradEffectTInRadialFormValRingDrawValRTypeInst.addColorStop(1,   'rgba(200, 200, 220, 0)');
+            painterCTXGenToolCallTheOOfDomMCanVVal.fillStyle = colorHoloGlowGradEffectTInRadialFormValRingDrawValRTypeInst;
+            painterCTXGenToolCallTheOOfDomMCanVVal.fillRect(0,0,64,64); 
+            return new THREE.CanvasTexture(ctxCtnRResCanDomBaseThis);
+        }
+
+        // 把一切空图纸点列阵建立放入系统环境大宇宙中心。
+        function BuildTheInitialBasicMathModelArrayHolderFrameWorkGraphicsObjectMeshGeometriesBase(){
+             let BffGeometryTOfPointToBThere = new THREE.BufferGeometry();
+             BffGeometryTOfPointToBThere.setAttribute('position', new THREE.BufferAttribute(FloatArMNodeXyzRenderNowArrayPtsGenValStoreBaseValTStoreInCAr, 3));
+             BffGeometryTOfPointToBThere.setAttribute('color',    new THREE.BufferAttribute(FloatArColorCorePointHoloBrightValRefHolderCArForC, 3));
+
+             nodesPointCloudGeometryDataGraphicWrapperStore = new THREE.Points(BffGeometryTOfPointToBThere, new THREE.PointsMaterial({
+                 size: 3.8, vertexColors: true, map: CraftCircularSoftLightStarFlareShapeRendererAlphaPatternTextureSysObjGFunctionCMap(),
+                 transparent: true, depthWrite: false, blending: THREE.AdditiveBlending 
+             }));
+             WorldCenterSelfRotatingMasterCoreGravityCoreNodeWrapRefGroupA3DGInstB.add(nodesPointCloudGeometryDataGraphicWrapperStore);
+
+             // 拉细网兜
+             let BffGeometryTRotLinessA= new THREE.BufferGeometry();
+             BffGeometryTRotLinessA.setAttribute('position', new THREE.BufferAttribute(FloatArrayForHoloWhiteFibersLinesWiresPositionsMemoryRefGThisAllocSizeCapArrayPntMaxToCap, 3).setUsage(THREE.DynamicDrawUsage));
+             BffGeometryTRotLinessA.setAttribute('color',    new THREE.BufferAttribute(FloatArrayColorGenMemoryHolderStoreArrayRefHoleFibersLinesArrayColorDataSArrayBVarListGen, 3).setUsage(THREE.DynamicDrawUsage));
+
+             LinesGrapicStoreMemRefBaseNodeObject = new THREE.LineSegments(BffGeometryTRotLinessA, new THREE.LineBasicMaterial({
+                 vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, linewidth: 0.8
+             }));
+             WorldCenterSelfRotatingMasterCoreGravityCoreNodeWrapRefGroupA3DGInstB.add(LinesGrapicStoreMemRefBaseNodeObject);
+             
+             CallCalculationSysToWriteDestinyMorphPointsByGivenTypeKeyNumStateGenValLogicCallerFunDoRPointCArrayMArrayCall(0); 
+        }
+
+        // ====== IV. 高阶几何星变大迁徙定位阵坐标系统 ！(用于切换算各种极复杂的数学图形向指坐标地!)。=========---
+        function CallCalculationSysToWriteDestinyMorphPointsByGivenTypeKeyNumStateGenValLogicCallerFunDoRPointCArrayMArrayCall( graphIDStateModeSelectCodeTypeDataToLoadOKeyOValVIdRefKeyVarIIdxVCallT ){
+            for(let iterIDIndexCurrentCount=0; iterIDIndexCurrentCount<MAX_TOTAL_NODES; iterIDIndexCurrentCount++) {
+                let ArrIndexPTRXMemOfOffsetOffsetMathSArrayLocationAThisHValueInDPosToG1ThisCallMRefCIndexByNumMult = iterIDIndexCurrentCount * 3;
+                let nx, ny, nz; let nCArrHoldTofColRG={r: 1, g:1, b:1};
+
+                if (graphIDStateModeSelectCodeTypeDataToLoadOKeyOValVIdRefKeyVarIIdxVCallT === 0 ) { 
+                    // [ 球中珠 : Mandala系统 (分橙核外青罩!)] 
+                    let insideRingGroupYesTypeRTheRadRefGroupYesOrIfObjPNoConditionSysRefOfNumIs= (iterIDIndexCurrentCount % 2 === 0);
+                    let MRBaseSphereTypeGenVForRadDistN = insideRingGroupYesTypeRTheRadRefGroupYesOrIfObjPNoConditionSysRefOfNumIs ? 45 : 98 + (Math.random()*6-3); 
+                    let Phi3DCircAValuePhiForGDataCosROVarBMathCosOp = Math.acos( -1 + (2*Math.random()) ); 
+                    let ThetaRadArgGAndCosTypeAARandomVStoreFThereS2TheP= Math.random()* Math.PI*2; 
+                    nx = MRBaseSphereTypeGenVForRadDistN * Math.sin(Phi3DCircAValuePhiForGDataCosROVarBMathCosOp)*Math.cos(ThetaRadArgGAndCosTypeAARandomVStoreFThereS2TheP);
+                    ny = MRBaseSphereTypeGenVForRadDistN * Math.sin(Phi3DCircAValuePhiForGDataCosROVarBMathCosOp)*Math.sin(ThetaRadArgGAndCosTypeAARandomVStoreFThereS2TheP); 
+                    nz = MRBaseSphereTypeGenVForRadDistN * Math.cos(Phi3DCircAValuePhiForGDataCosROVarBMathCosOp); 
+                    nCArrHoldTofColRG= insideRingGroupYesTypeRTheRadRefGroupYesOrIfObjPNoConditionSysRefOfNumIs ? {r:0.95, g:0.75, b:0.25} : {r:0.8, g:0.42, b:0.95};
+                }
+                else if (graphIDStateModeSelectCodeTypeDataToLoadOKeyOValVIdRefKeyVarIIdxVCallT === 1) { 
+                    // [ 量簇晶群方天结结 - Gyroid方! )] (以翠与青金色方系为底！)]! 
+                    let cubeBaseLimitAreaScaleDFromOFloatTThisA= 60 * Math.pow(Math.random(), 0.7);
+                    nx = (Math.random() - 0.5) * cubeBaseLimitAreaScaleDFromOFloatTThisA * 2.2 ;
+                    ny = (Math.random() - 0.5) * cubeBaseLimitAreaScaleDFromOFloatTThisA * 2.2 ;
+                    nz = (Math.random() - 0.5) * cubeBaseLimitAreaScaleDFromOFloatTThisA * 2.2 ;
+                    nCArrHoldTofColRG={r:0.62, g:0.88, b:0.35};  
+                }
+                else if (graphIDStateModeSelectCodeTypeDataToLoadOKeyOValVIdRefKeyVarIIdxVCallT === 2){ 
+                    // [ 三环莫维斯仙天神仙丝扣圈!(天海纯明高幽蓝色光仙圈)] : =====- !! ====--:====== ==== :!!! ==--  =-======== !!!!!!! ==-=!!! =====
+                    let TKtArTheTypeBaseFloatValGPhiTForXForGCallRMathA = (iterIDIndexCurrentCount/MAX_TOTAL_NODES) * Math.PI*2.0; 
+                    let RadiusT_TreVAlSFloatScaleRadMathFloatTypeOfStoreRValGObjBInRef1P20= 36;
+                    nx = RadiusT_TreVAlSFloatScaleRadMathFloatTypeOfStoreRValGObjBInRef1P20 * ( Math.sin(TKtArTheTypeBaseFloatValGPhiTForXForGCallRMathA)+ 2*Math.sin(2*TKtArTheTypeBaseFloatValGPhiTForXForGCallRMathA) ) + (Math.random()-0.5)*7.5;
+                    ny = RadiusT_TreVAlSFloatScaleRadMathFloatTypeOfStoreRValGObjBInRef1P20 * ( Math.cos(TKtArTheTypeBaseFloatValGPhiTForXForGCallRMathA)- 2*Math.cos(2*TKtArTheTypeBaseFloatValGPhiTForXForGCallRMathA) ) + (Math.random()-0.5)*7.5;
+                    nz = -RadiusT_TreVAlSFloatScaleRadMathFloatTypeOfStoreRValGObjBInRef1P20 * 1.3* Math.sin(3*TKtArTheTypeBaseFloatValGPhiTForXForGCallRMathA) + (Math.random()-0.5)*7.5;
+                    nCArrHoldTofColRG={r:0.25, g:0.6, b:0.95};  //幽高天灵灵寒蓝白冰透亮。极其脱冷！！  。::=---======:: -=:! !! =====: ==== ! : -=: !---- 
+                }
+
+                // 将该星球写入大名花标目的神图册记录板中给下一步拉牵。!！。 ===--=====----===================== -!!-= ! 
+                FloatArMNodeXyzTrgetWantGoArrayMemRefGTypePtsRefForMorphVHold[ArrIndexPTRXMemOfOffsetOffsetMathSArrayLocationAThisHValueInDPosToG1ThisCallMRefCIndexByNumMult]=nx;
+                FloatArMNodeXyzTrgetWantGoArrayMemRefGTypePtsRefForMorphVHold[ArrIndexPTRXMemOfOffsetOffsetMathSArrayLocationAThisHValueInDPosToG1ThisCallMRefCIndexByNumMult+1]=ny;
+                FloatArMNodeXyzTrgetWantGoArrayMemRefGTypePtsRefForMorphVHold[ArrIndexPTRXMemOfOffsetOffsetMathSArrayLocationAThisHValueInDPosToG1ThisCallMRefCIndexByNumMult+2]=nz;
+                
+                FloatArColorCorePointHoloBrightValRefHolderCArForC[ArrIndexPTRXMemOfOffsetOffsetMathSArrayLocationAThisHValueInDPosToG1ThisCallMRefCIndexByNumMult]=  nCArrHoldTofColRG.r;
+                FloatArColorCorePointHoloBrightValRefHolderCArForC[ArrIndexPTRXMemOfOffsetOffsetMathSArrayLocationAThisHValueInDPosToG1ThisCallMRefCIndexByNumMult+1]=nCArrHoldTofColRG.g;
+                FloatArColorCorePointHoloBrightValRefHolderCArForC[ArrIndexPTRXMemOfOffsetOffsetMathSArrayLocationAThisHValueInDPosToG1ThisCallMRefCIndexByNumMult+2]=nCArrHoldTofColRG.b;
+                
+                if (FloatArMNodeXyzRenderNowArrayPtsGenValStoreBaseValTStoreInCAr[0]===0 && iterIDIndexCurrentCount===MAX_TOTAL_NODES-1) { // 首次落降诞生切勿徐游 ！要真点出直立列！
+                   for(let ixvLocMemIndexTCountRCopyAInitOfS1RefStoreRefValueLoopCallThisFloatMemArOf=0;ixvLocMemIndexTCountRCopyAInitOfS1RefStoreRefValueLoopCallThisFloatMemArOf<MAX_TOTAL_NODES*3;ixvLocMemIndexTCountRCopyAInitOfS1RefStoreRefValueLoopCallThisFloatMemArOf++) { FloatArMNodeXyzRenderNowArrayPtsGenValStoreBaseValTStoreInCAr[ixvLocMemIndexTCountRCopyAInitOfS1RefStoreRefValueLoopCallThisFloatMemArOf]= FloatArMNodeXyzTrgetWantGoArrayMemRefGTypePtsRefForMorphVHold[ixvLocMemIndexTCountRCopyAInitOfS1RefStoreRefValueLoopCallThisFloatMemArOf]; }
+                }
+            }
+            if(nodesPointCloudGeometryDataGraphicWrapperStore) nodesPointCloudGeometryDataGraphicWrapperStore.geometry.attributes.color.needsUpdate = true;
+            syncHTMLPanelUIDashBoradLightsAndWordTextGraphicsUpdateHUDControlFunction();
+        }
+
+
+        // ====== ★★★ V. 量子柔和波推浪 (Smooth Gaussian Ripples Physics Array! 划时代的质感升级! !) ======! =  ============!!!!=======------========= :: -=======
+        
+        let PhysicsWaveArraySystemManagerMemoryObjectPushedListTheCacheListQueueAStoreCallAllStore=[]; // 可承装并发叠加海波多个的列装管水浪库波队列容器 
+
+        let userLaserToViewRayHitMathToolA= new THREE.Raycaster();
+        let targetWorldHitSpaceLayerVThisHitAInHWorldVMathOfRayCMathSPlBaseOpObjectV0PAndVecToO= new THREE.Plane(new THREE.Vector3(0,0,1), 0);
+        
+        window.addEventListener('pointerdown', (ePtrMUserClickToTrgtActionGenValEventA) => {
+             if (ePtrMUserClickToTrgtActionGenValEventA.target.tagName === 'BUTTON') return; // 如果只是点 UI 就别放引水浪弹波防止画面连杂!! !! : ===  - ===== :: --- : --
+
+             let ScreenPointRefToCamVectNormInDMathValXPosVToOpXStoreThisFloatVGenOpOfVarXCall1B= new THREE.Vector2( (ePtrMUserClickToTrgtActionGenValEventA.clientX/window.innerWidth)*2-1, -(ePtrMUserClickToTrgtActionGenValEventA.clientY/window.innerHeight)*2+1);
+             userLaserToViewRayHitMathToolA.setFromCamera(ScreenPointRefToCamVectNormInDMathValXPosVToOpXStoreThisFloatVGenOpOfVarXCall1B, TheMainScreenVisionViewCameraEngineObjectBaseToSeeVTypeObjTTargetTheTypePointAObjView);
+             let PtCenterHItDestT3GetRealPointAObjVectorHResVecReturn= new THREE.Vector3();
+             userLaserToViewRayHitMathToolA.ray.intersectPlane(targetWorldHitSpaceLayerVThisHitAInHWorldVMathOfRayCMathSPlBaseOpObjectV0PAndVecToO, PtCenterHItDestT3GetRealPointAObjVectorHResVecReturn);
+             
+             if(PtCenterHItDestT3GetRealPointAObjVectorHResVecReturn){
+                  //在鼠标触发的点扔个新生石子放入多石水波队列池开始让圈推圆！(极大的改进波圈滑效果系统 ! ） ==== ---- !!!
+                  PhysicsWaveArraySystemManagerMemoryObjectPushedListTheCacheListQueueAStoreCallAllStore.push({
+                      originX: PtCenterHItDestT3GetRealPointAObjVectorHResVecReturn.x, 
+                      originY: PtCenterHItDestT3GetRealPointAObjVectorHResVecReturn.y, 
+                      radiusFrontLifeCPointSpreadDistNMath: 0,   // 波中心现在还是紧一点水！开生生了 ！
+                      powerMaxValToFloatGenAStrengthDCAmValLifeVMathG: 1.0 // 最大的起高生命大跳 初始动神气生命元! ！！ == == -= ======== = =====!!!!====!!! ！！  - ::
+                  });
+             }
+        });
+
+
+        // ====== VI. 画出岁月引擎和数学时海钟大回走循环 ======= ====== -=== ========:: ---! ====::!!! ---- !!! === ====== =====-----==========!!!========-----
+        let TheUniversePhysicsMatrixGlobalMasterEngineClcClockTickerTypeObject= new THREE.Clock();
+
+        function TheInfiniteCycleGodMainAnimationSystemClockTriggerRunMethodHookOpMainRunLogicHookForC() {
+             requestAnimationFrame(TheInfiniteCycleGodMainAnimationSystemClockTriggerRunMethodHookOpMainRunLogicHookForC);
+
+             let theDTTimeElapasedToDiffGFloatBaseDeltaBForSysMThisOValSysMTimeRunDeltaG = Math.min(TheUniversePhysicsMatrixGlobalMasterEngineClcClockTickerTypeObject.getDelta(), 0.1); 
+             let GTotalRunLClockVSystemToAOverallFCurrentSystemOpLifeSMem = TheUniversePhysicsMatrixGlobalMasterEngineClcClockTickerTypeObject.getElapsedTime();
+
+             if (engineIsAutoSpinOn) WorldCenterSelfRotatingMasterCoreGravityCoreNodeWrapRefGroupA3DGInstB.rotation.y += 0.003; 
+
+             // ---------------- [ 第一步 : 发管和更推进目前活存的一切小水阵推浪并杀死消失过老的痕! ] ------------------- //
+             for(let wavMListIDNumIndexPtrIIDCountOByWTheRefAOfQueue= PhysicsWaveArraySystemManagerMemoryObjectPushedListTheCacheListQueueAStoreCallAllStore.length-1; wavMListIDNumIndexPtrIIDCountOByWTheRefAOfQueue>=0; wavMListIDNumIndexPtrIIDCountOByWTheRefAOfQueue--){
+                  let cwWaterSInstanceOpWvWaveTypeMInObjItemVarOpInMemRefDataV= PhysicsWaveArraySystemManagerMemoryObjectPushedListTheCacheListQueueAStoreCallAllStore[wavMListIDNumIndexPtrIIDCountOByWTheRefAOfQueue];
+                  cwWaterSInstanceOpWvWaveTypeMInObjItemVarOpInMemRefDataV.radiusFrontLifeCPointSpreadDistNMath += theDTTimeElapasedToDiffGFloatBaseDeltaBForSysMThisOValSysMTimeRunDeltaG * 75.0; //波的放推圆度扩大涨快扩速度 :!!----===========!!!!====== --- !!!!===:: -=-=
+                  cwWaterSInstanceOpWvWaveTypeMInObjItemVarOpInMemRefDataV.powerMaxValToFloatGenAStrengthDCAmValLifeVMathG -= theDTTimeElapasedToDiffGFloatBaseDeltaBForSysMThisOValSysMTimeRunDeltaG * 0.4;  // 波能神光寿命散变减衰速！（极其重要的淡远没平效果)。：== ===== ======== !!!! ----::  
+                  //波淡空死了就把这涟清理抛走无牵引拉 累及计算 !! -----:=== ========-----
+                  if(cwWaterSInstanceOpWvWaveTypeMInObjItemVarOpInMemRefDataV.powerMaxValToFloatGenAStrengthDCAmValLifeVMathG<=0){ PhysicsWaveArraySystemManagerMemoryObjectPushedListTheCacheListQueueAStoreCallAllStore.splice(wavMListIDNumIndexPtrIIDCountOByWTheRefAOfQueue, 1); }
+             }
+
+
+             // ---------------  [ 第二部分 ：计算所有众多众灵神的运动：飘徐游、神趋回归和最极质感的高斯曲浪柔滑力算波影响!!  ] --------------- // 
+             let rawDrawCAndDNowPositionXStoreMArBaseLiveMemoryPointsAThisTMemValueGenSCallOfGRefRValueBaseDataStoreType= nodesPointCloudGeometryDataGraphicWrapperStore.geometry.attributes.position.array; 
+             
+             for(let mSLocPtIidNodeIDXIteraIdGStorePTypeAValueIntCountForRunSByRefTypeTypeRBaseIdCallByGenNLoopMForGPointN1ForHMathS0CallInLoopGTheVPointC2InGArrayTypeBTypeDOfGenCall=0; mSLocPtIidNodeIDXIteraIdGStorePTypeAValueIntCountForRunSByRefTypeTypeRBaseIdCallByGenNLoopMForGPointN1ForHMathS0CallInLoopGTheVPointC2InGArrayTypeBTypeDOfGenCall<MAX_TOTAL_NODES; mSLocPtIidNodeIDXIteraIdGStorePTypeAValueIntCountForRunSByRefTypeTypeRBaseIdCallByGenNLoopMForGPointN1ForHMathS0CallInLoopGTheVPointC2InGArrayTypeBTypeDOfGenCall++){
+                  
+                 let theBaseBMemValArIDXLocationIdxOVarXInOffsetOpIntVarCountDataTypeHNumHNumPStoreOffsetMultSByRIndexTypeTypeTheMArrOfIntRAndDMathRefB= mSLocPtIidNodeIDXIteraIdGStorePTypeAValueIntCountForRunSByRefTypeTypeRBaseIdCallByGenNLoopMForGPointN1ForHMathS0CallInLoopGTheVPointC2InGArrayTypeBTypeDOfGenCall*3;
+                 
+                 // 计算游虚本原大坐标，飘飘呼吸效 : ====== ==-----!!-= ----- ========!!  ------- :::: ======= !!!!! ===== ====== ！！== ==!! --====== !!!!=== ========!!! --:::: --=- ====
+                 let mathHOfBPTThisVInPointOfTTargetOpMemHCallToMFloatAndStoreRefDXMathThisValNRefCallGDataMBaseGenStoreAThisValueInXGetPVarOfBThisVarOfArrayMem = FloatArMNodeXyzTrgetWantGoArrayMemRefGTypePtsRefForMorphVHold[theBaseBMemValArIDXLocationIdxOVarXInOffsetOpIntVarCountDataTypeHNumHNumPStoreOffsetMultSByRIndexTypeTypeTheMArrOfIntRAndDMathRefB]   + Math.sin(GTotalRunLClockVSystemToAOverallFCurrentSystemOpLifeSMem+mSLocPtIidNodeIDXIteraIdGStorePTypeAValueIntCountForRunSByRefTypeTypeRBaseIdCallByGenNLoopMForGPointN1ForHMathS0CallInLoopGTheVPointC2InGArrayTypeBTypeDOfGenCall*0.8)*2.0; 
+                 let mathHOfBPTThisVInPointOfTTargetOpMemHCallToMFloatAndStoreRefDYMathThisValNRefCallGDataMBaseGenStoreAThisValueInYGetPVarOfBThisVarOfArrayMem = FloatArMNodeXyzTrgetWantGoArrayMemRefGTypePtsRefForMorphVHold[theBaseBMemValArIDXLocationIdxOVarXInOffsetOpIntVarCountDataTypeHNumHNumPStoreOffsetMultSByRIndexTypeTypeTheMArrOfIntRAndDMathRefB+1] + Math.cos(GTotalRunLClockVSystemToAOverallFCurrentSystemOpLifeSMem*0.8+mSLocPtIidNodeIDXIteraIdGStorePTypeAValueIntCountForRunSByRefTypeTypeRBaseIdCallByGenNLoopMForGPointN1ForHMathS0CallInLoopGTheVPointC2InGArrayTypeBTypeDOfGenCall)*2.0; 
+                 let mathHOfBPTThisVInPointOfTTargetOpMemHCallToMFloatAndStoreRefDZMathThisValNRefCallGDataMBaseGenStoreAThisValueInZGetPVarOfBThisVarOfArrayMem = FloatArMNodeXyzTrgetWantGoArrayMemRefGTypePtsRefForMorphVHold[theBaseBMemValArIDXLocationIdxOVarXInOffsetOpIntVarCountDataTypeHNumHNumPStoreOffsetMultSByRIndexTypeTypeTheMArrOfIntRAndDMathRefB+2]; 
+                 
+                 // 以 0.04 平滑动切过场插变 (极舒服的回向家向力)! ==== ===!!! !!-==== ！！！--:=======  !=====!!!!! --======== !! - 
+                 let currPLocXPosMathHoldPointSValHInOfGValueCallP1ThisAr1VarRefPCallMemOfSysFArRAndRefBOfTypeGetPosForA= rawDrawCAndDNowPositionXStoreMArBaseLiveMemoryPointsAThisTMemValueGenSCallOfGRefRValueBaseDataStoreType[theBaseBMemValArIDXLocationIdxOVarXInOffsetOpIntVarCountDataTypeHNumHNumPStoreOffsetMultSByRIndexTypeTypeTheMArrOfIntRAndDMathRefB]; 
+                 let currPLocYPosMathHoldPointSValHInOfGValueCallP1ThisAr2VarRefPCallMemOfSysFArRAndRefBOfTypeGetPosForA= rawDrawCAndDNowPositionXStoreMArBaseLiveMemoryPointsAThisTMemValueGenSCallOfGRefRValueBaseDataStoreType[theBaseBMemValArIDXLocationIdxOVarXInOffsetOpIntVarCountDataTypeHNumHNumPStoreOffsetMultSByRIndexTypeTypeTheMArrOfIntRAndDMathRefB+1]; 
+                 let currPLocZPosMathHoldPointSValHInOfGValueCallP1ThisAr3VarRefPCallMemOfSysFArRAndRefBOfTypeGetPosForA= rawDrawCAndDNowPositionXStoreMArBaseLiveMemoryPointsAThisTMemValueGenSCallOfGRefRValueBaseDataStoreType[theBaseBMemValArIDXLocationIdxOVarXInOffsetOpIntVarCountDataTypeHNumHNumPStoreOffsetMultSByRIndexTypeTypeTheMArrOfIntRAndDMathRefB+2]; 
+
+                 let velXMDiffMathDistanceDistRefFromX1OArrayFloatMathDistCallInTObjOOfDStepTypeGetNOfThisValHIntNumGenGVarValTypeFInStoreX= mathHOfBPTThisVInPointOfTTargetOpMemHCallToMFloatAndStoreRefDXMathThisValNRefCallGDataMBaseGenStoreAThisValueInXGetPVarOfBThisVarOfArrayMem-currPLocXPosMathHoldPointSValHInOfGValueCallP1ThisAr1VarRefPCallMemOfSysFArRAndRefBOfTypeGetPosForA; 
+                 let velYMDiffMathDistanceDistRefFromY1OArrayFloatMathDistCallInTObjOOfDStepTypeGetNOfThisValHIntNumGenGVarValTypeFInStoreY= mathHOfBPTThisVInPointOfTTargetOpMemHCallToMFloatAndStoreRefDYMathThisValNRefCallGDataMBaseGenStoreAThisValueInYGetPVarOfBThisVarOfArrayMem-currPLocYPosMathHoldPointSValHInOfGValueCallP1ThisAr2VarRefPCallMemOfSysFArRAndRefBOfTypeGetPosForA;
+                 let velZMDiffMathDistanceDistRefFromZ1OArrayFloatMathDistCallInTObjOOfDStepTypeGetNOfThisValHIntNumGenGVarValTypeFInStoreZ= mathHOfBPTThisVInPointOfTTargetOpMemHCallToMFloatAndStoreRefDZMathThisValNRefCallGDataMBaseGenStoreAThisValueInZGetPVarOfBThisVarOfArrayMem-currPLocZPosMathHoldPointSValHInOfGValueCallP1ThisAr3VarRefPCallMemOfSysFArRAndRefBOfTypeGetPosForA;
+                 
+                 currPLocXPosMathHoldPointSValHInOfGValueCallP1ThisAr1VarRefPCallMemOfSysFArRAndRefBOfTypeGetPosForA+= velXMDiffMathDistanceDistRefFromX1OArrayFloatMathDistCallInTObjOOfDStepTypeGetNOfThisValHIntNumGenGVarValTypeFInStoreX* 0.045;
+                 currPLocYPosMathHoldPointSValHInOfGValueCallP1ThisAr2VarRefPCallMemOfSysFArRAndRefBOfTypeGetPosForA+= velYMDiffMathDistanceDistRefFromY1OArrayFloatMathDistCallInTObjOOfDStepTypeGetNOfThisValHIntNumGenGVarValTypeFInStoreY* 0.045;
+                 currPLocZPosMathHoldPointSValHInOfGValueCallP1ThisAr3VarRefPCallMemOfSysFArRAndRefBOfTypeGetPosForA+= velZMDiffMathDistanceDistRefFromZ1OArrayFloatMathDistCallInTObjOOfDStepTypeGetNOfThisValHIntNumGenGVarValTypeFInStoreZ* 0.045;
+
+
+                 // ★★★ 精密叠加目前这阵图水上所以所有的震天荡的平缓叠加合推影响位!!(非常完美的动态液极质推水感！神技所在!!!):  ----- ========== -----======== : ==== -- ==== ！！ -- === ---- ==== !!!! ======== !!!!! ====! - ::: -=!!! ====---- ! ---- ======== === ---: =!!!!! ==== ---
+                 let aggregatedOffsetInThisXCallFloatScaleDistAndVecSFloatSumVarValInX = 0;
+                 let aggregatedOffsetInThisYCallFloatScaleDistAndVecSFloatSumVarValInY = 0; 
+                 let aggregatedOffsetInThisZCallFloatScaleDistAndVecSFloatSumVarValInZ = 0;
+
+                 for(let waidxToIdLoopIndexVMemArrayForCForAThereSMathOfIndexOfWThisStoreOfVal=0; waidxToIdLoopIndexVMemArrayForCForAThereSMathOfIndexOfWThisStoreOfVal<PhysicsWaveArraySystemManagerMemoryObjectPushedListTheCacheListQueueAStoreCallAllStore.length; waidxToIdLoopIndexVMemArrayForCForAThereSMathOfIndexOfWThisStoreOfVal++){
+                     let cWTToVarPObjectWaterWMemHoldSysTMathDataO = PhysicsWaveArraySystemManagerMemoryObjectPushedListTheCacheListQueueAStoreCallAllStore[waidxToIdLoopIndexVMemArrayForCForAThereSMathOfIndexOfWThisStoreOfVal]; 
+                     let distanceXVecOfDistXOfAForTMemThisVStoreOfThisPointWGenMDisA = currPLocXPosMathHoldPointSValHInOfGValueCallP1ThisAr1VarRefPCallMemOfSysFArRAndRefBOfTypeGetPosForA - cWTToVarPObjectWaterWMemHoldSysTMathDataO.originX; 
+                     let distanceYVecOfDistYOfBForTMemThisVStoreOfThisPointWGenMDisB = currPLocYPosMathHoldPointSValHInOfGValueCallP1ThisAr2VarRefPCallMemOfSysFArRAndRefBOfTypeGetPosForA - cWTToVarPObjectWaterWMemHoldSysTMathDataO.originY; 
+                     
+                     let AbsoluteStraightTDistBaseMFloatValTypeTypeScaleFloatPValGenValRFloatScaleHCallBRefSysSInType= Math.sqrt(distanceXVecOfDistXOfAForTMemThisVStoreOfThisPointWGenMDisA*distanceXVecOfDistXOfAForTMemThisVStoreOfThisPointWGenMDisA + distanceYVecOfDistYOfBForTMemThisVStoreOfThisPointWGenMDisB*distanceYVecOfDistYOfBForTMemThisVStoreOfThisPointWGenMDisB);
+
+                     let distanceFromRinTWaveRRealFloatSCallRefMemMathForMathWaveGenSysVarOpMathSubTheDis= Math.abs(AbsoluteStraightTDistBaseMFloatValTypeTypeScaleFloatPValGenValRFloatScaleHCallBRefSysSInType - cWTToVarPObjectWaterWMemHoldSysTMathDataO.radiusFrontLifeCPointSpreadDistNMath); 
+
+                     let waveThinkThckRingBoundAndMWidthMathRangeNThkBaseDataTypeTForThisConstLimitRangeAObjVarADataThisTypeV= 18.0;  //一个水的波动曲度背起并柔入宽度度！！  (就是像山体水山宽度一样的极圆弧柔） !!! ======== ======= ===== =====- = ==!!! === ========!::::======== !!! ---- !!!! -----  = : =====:
+                     if( distanceFromRinTWaveRRealFloatSCallRefMemMathForMathWaveGenSysVarOpMathSubTheDis < waveThinkThckRingBoundAndMWidthMathRangeNThkBaseDataTypeTForThisConstLimitRangeAObjVarADataThisTypeV ){ 
+                         
+                         let norCPhaseToSFromHGaussianCurvTheFactorTypeMathBFromOTheCValueBMathTypeRealT= 1.0 - (distanceFromRinTWaveRRealFloatSCallRefMemMathForMathWaveGenSysVarOpMathSubTheDis / waveThinkThckRingBoundAndMWidthMathRangeNThkBaseDataTypeTForThisConstLimitRangeAObjVarADataThisTypeV); 
+                         //平滑二次缓方（核心！造出果冰水神感的神水算法!!!): 
+                         // ★★★修改点：通过将系数 15.0 下调至 3.5，大幅度减小整体波纹的起伏激荡幅度！
+                         let waveStrengthScaleBaseMValDataFactorOAndGenThisGThisB = (norCPhaseToSFromHGaussianCurvTheFactorTypeMathBFromOTheCValueBMathTypeRealT*norCPhaseToSFromHGaussianCurvTheFactorTypeMathBFromOTheCValueBMathTypeRealT) * cWTToVarPObjectWaterWMemHoldSysTMathDataO.powerMaxValToFloatGenAStrengthDCAmValLifeVMathG * 3.5; 
+                         
+                         aggregatedOffsetInThisXCallFloatScaleDistAndVecSFloatSumVarValInX += (distanceXVecOfDistXOfAForTMemThisVStoreOfThisPointWGenMDisA / (AbsoluteStraightTDistBaseMFloatValTypeTypeScaleFloatPValGenValRFloatScaleHCallBRefSysSInType||1)) * waveStrengthScaleBaseMValDataFactorOAndGenThisGThisB; 
+                         aggregatedOffsetInThisYCallFloatScaleDistAndVecSFloatSumVarValInY += (distanceYVecOfDistYOfBForTMemThisVStoreOfThisPointWGenMDisB / (AbsoluteStraightTDistBaseMFloatValTypeTypeScaleFloatPValGenValRFloatScaleHCallBRefSysSInType||1)) * waveStrengthScaleBaseMValDataFactorOAndGenThisGThisB; 
+                         
+                         // ★★★修改点：通过将系数 1.5 下调至 0.5，显著降低网阵张力在 Z 轴（高度）上的向上弹飞感，使波浪显得更平和微小。
+                         aggregatedOffsetInThisZCallFloatScaleDistAndVecSFloatSumVarValInZ += (waveStrengthScaleBaseMValDataFactorOAndGenThisGThisB * 0.5);
+                     }
+                 }
+
+                 // 把叠加被影响后移挪算的神量给存进去 ! （没任何波自然没加上面波浪算量的 就是原始位！！：:: !!!----- !  =====:
+                 rawDrawCAndDNowPositionXStoreMArBaseLiveMemoryPointsAThisTMemValueGenSCallOfGRefRValueBaseDataStoreType[theBaseBMemValArIDXLocationIdxOVarXInOffsetOpIntVarCountDataTypeHNumHNumPStoreOffsetMultSByRIndexTypeTypeTheMArrOfIntRAndDMathRefB]=currPLocXPosMathHoldPointSValHInOfGValueCallP1ThisAr1VarRefPCallMemOfSysFArRAndRefBOfTypeGetPosForA + aggregatedOffsetInThisXCallFloatScaleDistAndVecSFloatSumVarValInX;
+                 rawDrawCAndDNowPositionXStoreMArBaseLiveMemoryPointsAThisTMemValueGenSCallOfGRefRValueBaseDataStoreType[theBaseBMemValArIDXLocationIdxOVarXInOffsetOpIntVarCountDataTypeHNumHNumPStoreOffsetMultSByRIndexTypeTypeTheMArrOfIntRAndDMathRefB+1]=currPLocYPosMathHoldPointSValHInOfGValueCallP1ThisAr2VarRefPCallMemOfSysFArRAndRefBOfTypeGetPosForA + aggregatedOffsetInThisYCallFloatScaleDistAndVecSFloatSumVarValInY;
+                 rawDrawCAndDNowPositionXStoreMArBaseLiveMemoryPointsAThisTMemValueGenSCallOfGRefRValueBaseDataStoreType[theBaseBMemValArIDXLocationIdxOVarXInOffsetOpIntVarCountDataTypeHNumHNumPStoreOffsetMultSByRIndexTypeTypeTheMArrOfIntRAndDMathRefB+2]=currPLocZPosMathHoldPointSValHInOfGValueCallP1ThisAr3VarRefPCallMemOfSysFArRAndRefBOfTypeGetPosForA + aggregatedOffsetInThisZCallFloatScaleDistAndVecSFloatSumVarValInZ;
+             }
+
+             nodesPointCloudGeometryDataGraphicWrapperStore.geometry.attributes.position.needsUpdate = true;
+
+
+             // ---------------- [ 第散步 ：把这些跑了极游动位的结节点相互寻找有眼光者拉弦网 ! : ------   ====== ========= ] ---------------
+             let FloatSysRealCAndCurrentDAndRenderPosBufferArrayPFromGraphicGroupBOfXBaseSLineRTypeMemX = LinesGrapicStoreMemRefBaseNodeObject.geometry.attributes.position.array; 
+             let ColorGraphicSysTypeStoreArrayColorVBuffArrOfDrawRRenderBaseLineTypeLineRefArrXCallSVarTBaseRArrGStoreMemSAndVOpO= LinesGrapicStoreMemRefBaseNodeObject.geometry.attributes.color.array;
+             let countActiveUsedNetWiresAndFiberConnectionsTypeNMaxCountVarInStoreTypeInMObjInNumDMemNumCountCountSysIn = 0; 
+
+             for (let SAidLookIDXArraySearchTargetValBasePtFromNumIdGTheArrIndexA =0; SAidLookIDXArraySearchTargetValBasePtFromNumIdGTheArrIndexA<MAX_TOTAL_NODES; SAidLookIDXArraySearchTargetValBasePtFromNumIdGTheArrIndexA++) {
+                  
+                 let theBaseCThisIDIdCallOGetXNumITheMemValueVarMCallRThisByDataLocI0C0CArrayBaseGetSArODataAThisD0= SAidLookIDXArraySearchTargetValBasePtFromNumIdGTheArrIndexA*3; 
+                 let sAxFloatPt= rawDrawCAndDNowPositionXStoreMArBaseLiveMemoryPointsAThisTMemValueGenSCallOfGRefRValueBaseDataStoreType[theBaseCThisIDIdCallOGetXNumITheMemValueVarMCallRThisByDataLocI0C0CArrayBaseGetSArODataAThisD0]; 
+                 let sAyFloatPt= rawDrawCAndDNowPositionXStoreMArBaseLiveMemoryPointsAThisTMemValueGenSCallOfGRefRValueBaseDataStoreType[theBaseCThisIDIdCallOGetXNumITheMemValueVarMCallRThisByDataLocI0C0CArrayBaseGetSArODataAThisD0+1];
+                 let sAzFloatPt= rawDrawCAndDNowPositionXStoreMArBaseLiveMemoryPointsAThisTMemValueGenSCallOfGRefRValueBaseDataStoreType[theBaseCThisIDIdCallOGetXNumITheMemValueVarMCallRThisByDataLocI0C0CArrayBaseGetSArODataAThisD0+2]; 
+                 
+                 let BColorsXRVal= FloatArColorCorePointHoloBrightValRefHolderCArForC[theBaseCThisIDIdCallOGetXNumITheMemValueVarMCallRThisByDataLocI0C0CArrayBaseGetSArODataAThisD0];
+                 let BColorsYGVal= FloatArColorCorePointHoloBrightValRefHolderCArForC[theBaseCThisIDIdCallOGetXNumITheMemValueVarMCallRThisByDataLocI0C0CArrayBaseGetSArODataAThisD0+1];
+                 let BColorsZBVal= FloatArColorCorePointHoloBrightValRefHolderCArForC[theBaseCThisIDIdCallOGetXNumITheMemValueVarMCallRThisByDataLocI0C0CArrayBaseGetSArODataAThisD0+2];
+
+                 for (let TIdxTypeGetFromLoopDestSearchDataObjOpBIntIdGToAThereOfVCountTypeRef= SAidLookIDXArraySearchTargetValBasePtFromNumIdGTheArrIndexA+1; TIdxTypeGetFromLoopDestSearchDataObjOpBIntIdGToAThereOfVCountTypeRef<MAX_TOTAL_NODES; TIdxTypeGetFromLoopDestSearchDataObjOpBIntIdGToAThereOfVCountTypeRef++){
+                    
+                    if (countActiveUsedNetWiresAndFiberConnectionsTypeNMaxCountVarInStoreTypeInMObjInNumDMemNumCountCountSysIn>=18000) break; //极界限超限跳走不出内死报
+                    
+                    let dbIDXOfDMemAValueVarIObjGetTargetThisPointOpDataMemToMForStoreArArrayStoreI2TBaseObjForAndValueGetIn= TIdxTypeGetFromLoopDestSearchDataObjOpBIntIdGToAThereOfVCountTypeRef*3; 
+                    let dFxDiffBetween= sAxFloatPt-rawDrawCAndDNowPositionXStoreMArBaseLiveMemoryPointsAThisTMemValueGenSCallOfGRefRValueBaseDataStoreType[dbIDXOfDMemAValueVarIObjGetTargetThisPointOpDataMemToMForStoreArArrayStoreI2TBaseObjForAndValueGetIn]; 
+                    let dFyDiffBetween= sAyFloatPt-rawDrawCAndDNowPositionXStoreMArBaseLiveMemoryPointsAThisTMemValueGenSCallOfGRefRValueBaseDataStoreType[dbIDXOfDMemAValueVarIObjGetTargetThisPointOpDataMemToMForStoreArArrayStoreI2TBaseObjForAndValueGetIn+1]; 
+                    let dFzDiffBetween= sAzFloatPt-rawDrawCAndDNowPositionXStoreMArBaseLiveMemoryPointsAThisTMemValueGenSCallOfGRefRValueBaseDataStoreType[dbIDXOfDMemAValueVarIObjGetTargetThisPointOpDataMemToMForStoreArArrayStoreI2TBaseObjForAndValueGetIn+2];
+
+                    let dSQSquareSMathTheScaleADataRealSFromHResSqThisStoreOfRCall= dFxDiffBetween*dFxDiffBetween + dFyDiffBetween*dFyDiffBetween + dFzDiffBetween*dFzDiffBetween; 
+                    
+                    if( dSQSquareSMathTheScaleADataRealSFromHResSqThisStoreOfRCall < WIRE_CONNECT_THRESHOLD*WIRE_CONNECT_THRESHOLD ){
+                        
+                        let baseIndexAOffsetRByV6OfScaleSVarAndDValueAOpToMArrayPtrStoreMByPNumSDataGetVCallGetInVTypeCallFVar1Loc2MathMOfOfArrayDThisI3The= countActiveUsedNetWiresAndFiberConnectionsTypeNMaxCountVarInStoreTypeInMObjInNumDMemNumCountCountSysIn*6;
+                        FloatSysRealCAndCurrentDAndRenderPosBufferArrayPFromGraphicGroupBOfXBaseSLineRTypeMemX[baseIndexAOffsetRByV6OfScaleSVarAndDValueAOpToMArrayPtrStoreMByPNumSDataGetVCallGetInVTypeCallFVar1Loc2MathMOfOfArrayDThisI3The] = sAxFloatPt; 
+                        FloatSysRealCAndCurrentDAndRenderPosBufferArrayPFromGraphicGroupBOfXBaseSLineRTypeMemX[baseIndexAOffsetRByV6OfScaleSVarAndDValueAOpToMArrayPtrStoreMByPNumSDataGetVCallGetInVTypeCallFVar1Loc2MathMOfOfArrayDThisI3The+1]= sAyFloatPt;
+                        FloatSysRealCAndCurrentDAndRenderPosBufferArrayPFromGraphicGroupBOfXBaseSLineRTypeMemX[baseIndexAOffsetRByV6OfScaleSVarAndDValueAOpToMArrayPtrStoreMByPNumSDataGetVCallGetInVTypeCallFVar1Loc2MathMOfOfArrayDThisI3The+2]= sAzFloatPt; 
+                        
+                        FloatSysRealCAndCurrentDAndRenderPosBufferArrayPFromGraphicGroupBOfXBaseSLineRTypeMemX[baseIndexAOffsetRByV6OfScaleSVarAndDValueAOpToMArrayPtrStoreMByPNumSDataGetVCallGetInVTypeCallFVar1Loc2MathMOfOfArrayDThisI3The+3]= rawDrawCAndDNowPositionXStoreMArBaseLiveMemoryPointsAThisTMemValueGenSCallOfGRefRValueBaseDataStoreType[dbIDXOfDMemAValueVarIObjGetTargetThisPointOpDataMemToMForStoreArArrayStoreI2TBaseObjForAndValueGetIn];
+                        FloatSysRealCAndCurrentDAndRenderPosBufferArrayPFromGraphicGroupBOfXBaseSLineRTypeMemX[baseIndexAOffsetRByV6OfScaleSVarAndDValueAOpToMArrayPtrStoreMByPNumSDataGetVCallGetInVTypeCallFVar1Loc2MathMOfOfArrayDThisI3The+4]= rawDrawCAndDNowPositionXStoreMArBaseLiveMemoryPointsAThisTMemValueGenSCallOfGRefRValueBaseDataStoreType[dbIDXOfDMemAValueVarIObjGetTargetThisPointOpDataMemToMForStoreArArrayStoreI2TBaseObjForAndValueGetIn+1];
+                        FloatSysRealCAndCurrentDAndRenderPosBufferArrayPFromGraphicGroupBOfXBaseSLineRTypeMemX[baseIndexAOffsetRByV6OfScaleSVarAndDValueAOpToMArrayPtrStoreMByPNumSDataGetVCallGetInVTypeCallFVar1Loc2MathMOfOfArrayDThisI3The+5]= rawDrawCAndDNowPositionXStoreMArBaseLiveMemoryPointsAThisTMemValueGenSCallOfGRefRValueBaseDataStoreType[dbIDXOfDMemAValueVarIObjGetTargetThisPointOpDataMemToMForStoreArArrayStoreI2TBaseObjForAndValueGetIn+2];
+
+                        let fadingTLinePVarPTypeDInOfAndRGenToMathRefPFromDistanceTypeGetOpCallDResultToRRefC = 1.0- (Math.sqrt(dSQSquareSMathTheScaleADataRealSFromHResSqThisStoreOfRCall)/WIRE_CONNECT_THRESHOLD);
+                        //给黑隐着减微透 ！！！== ---- === ==== ==   ==== -= - --:: !!! ----: == =  
+                        let CBaseR = BColorsXRVal * fadingTLinePVarPTypeDInOfAndRGenToMathRefPFromDistanceTypeGetOpCallDResultToRRefC * 0.45;
+                        let CBaseG = BColorsYGVal * fadingTLinePVarPTypeDInOfAndRGenToMathRefPFromDistanceTypeGetOpCallDResultToRRefC * 0.45; 
+                        let CBaseB = BColorsZBVal * fadingTLinePVarPTypeDInOfAndRGenToMathRefPFromDistanceTypeGetOpCallDResultToRRefC * 0.45; 
+
+                        ColorGraphicSysTypeStoreArrayColorVBuffArrOfDrawRRenderBaseLineTypeLineRefArrXCallSVarTBaseRArrGStoreMemSAndVOpO[baseIndexAOffsetRByV6OfScaleSVarAndDValueAOpToMArrayPtrStoreMByPNumSDataGetVCallGetInVTypeCallFVar1Loc2MathMOfOfArrayDThisI3The]  =CBaseR; 
+                        ColorGraphicSysTypeStoreArrayColorVBuffArrOfDrawRRenderBaseLineTypeLineRefArrXCallSVarTBaseRArrGStoreMemSAndVOpO[baseIndexAOffsetRByV6OfScaleSVarAndDValueAOpToMArrayPtrStoreMByPNumSDataGetVCallGetInVTypeCallFVar1Loc2MathMOfOfArrayDThisI3The+1]=CBaseG;
+                        ColorGraphicSysTypeStoreArrayColorVBuffArrOfDrawRRenderBaseLineTypeLineRefArrXCallSVarTBaseRArrGStoreMemSAndVOpO[baseIndexAOffsetRByV6OfScaleSVarAndDValueAOpToMArrayPtrStoreMByPNumSDataGetVCallGetInVTypeCallFVar1Loc2MathMOfOfArrayDThisI3The+2]=CBaseB;
+                        ColorGraphicSysTypeStoreArrayColorVBuffArrOfDrawRRenderBaseLineTypeLineRefArrXCallSVarTBaseRArrGStoreMemSAndVOpO[baseIndexAOffsetRByV6OfScaleSVarAndDValueAOpToMArrayPtrStoreMByPNumSDataGetVCallGetInVTypeCallFVar1Loc2MathMOfOfArrayDThisI3The+3]=CBaseR; 
+                        ColorGraphicSysTypeStoreArrayColorVBuffArrOfDrawRRenderBaseLineTypeLineRefArrXCallSVarTBaseRArrGStoreMemSAndVOpO[baseIndexAOffsetRByV6OfScaleSVarAndDValueAOpToMArrayPtrStoreMByPNumSDataGetVCallGetInVTypeCallFVar1Loc2MathMOfOfArrayDThisI3The+4]=CBaseG; 
+                        ColorGraphicSysTypeStoreArrayColorVBuffArrOfDrawRRenderBaseLineTypeLineRefArrXCallSVarTBaseRArrGStoreMemSAndVOpO[baseIndexAOffsetRByV6OfScaleSVarAndDValueAOpToMArrayPtrStoreMByPNumSDataGetVCallGetInVTypeCallFVar1Loc2MathMOfOfArrayDThisI3The+5]=CBaseB; 
+                        countActiveUsedNetWiresAndFiberConnectionsTypeNMaxCountVarInStoreTypeInMObjInNumDMemNumCountCountSysIn++; 
+                    }
+                 }
+             }
+
+             LinesGrapicStoreMemRefBaseNodeObject.geometry.setDrawRange( 0, countActiveUsedNetWiresAndFiberConnectionsTypeNMaxCountVarInStoreTypeInMObjInNumDMemNumCountCountSysIn*2 );
+             LinesGrapicStoreMemRefBaseNodeObject.geometry.attributes.position.needsUpdate= true;
+             LinesGrapicStoreMemRefBaseNodeObject.geometry.attributes.color.needsUpdate= true;
+             
+             DragPanMouseKeyboardVisionWatchSysUserOperateCamOrbitRefObjInstCtT.update();
+             worldFrameGenRendererCanvasCoreXOp.render(universeEngineCoreTheSceneRoot, TheMainScreenVisionViewCameraEngineObjectBaseToSeeVTypeObjTTargetTheTypePointAObjView);
+        }
+
+        
+
+        // ======== VII. 操作指令界面及全能系统智能联动的总调度控流！！ ======== !!! --------  =========
+        
+        function syncHTMLPanelUIDashBoradLightsAndWordTextGraphicsUpdateHUDControlFunction() {
+             let refUIRowCPanelInfoVAndDocXSysUIFadeContainerBaseMThisOfOpGetAndValOThisToGetRefBUI = document.getElementById('matrix-dashboard');
+             refUIRowCPanelInfoVAndDocXSysUIFadeContainerBaseMThisOfOpGetAndValOThisToGetRefBUI.style.opacity = '0';
+             
+             // 字体面文字更新 ! !! ----- ==== ==
+             setTimeout(() => {
+                 let currDBRecordAIndexCValueVThatFetchVFromBaseArrayGenA = GRAPH_ARCHIVES[stateGlobalModelIndex];
+                 document.getElementById('sys-name').innerText = currDBRecordAIndexCValueVThatFetchVFromBaseArrayGenA.name;
+                 document.getElementById('sys-desc').innerText = currDBRecordAIndexCValueVThatFetchVFromBaseArrayGenA.desc;
+                 refUIRowCPanelInfoVAndDocXSysUIFadeContainerBaseMThisOfOpGetAndValOThisToGetRefBUI.style.opacity = '1';
+             }, 450);
+
+             // ★★★(重中之重的绝绝绝色设计)灯排组态大连贯!! : 将不属当前的归零褪隐去!给对应的燃亮激活（加Class） !：====== !!!!!=======- == ----::!!!!! ====---======----- ====!!!
+             for(let loopiThisAAndIndexByCheckLampGroupMSystemSUIBaseThisCallIndexOpValueOArrayAObjBy=0; loopiThisAAndIndexByCheckLampGroupMSystemSUIBaseThisCallIndexOpValueOArrayAObjBy<3; loopiThisAAndIndexByCheckLampGroupMSystemSUIBaseThisCallIndexOpValueOArrayAObjBy++) { 
+                let specificLampAAndSysIndexGetRefDocBAndCallRefDOMOpObjInTypeOpA= document.getElementById('lamp-'+loopiThisAAndIndexByCheckLampGroupMSystemSUIBaseThisCallIndexOpValueOArrayAObjBy);
+                if (loopiThisAAndIndexByCheckLampGroupMSystemSUIBaseThisCallIndexOpValueOArrayAObjBy === stateGlobalModelIndex ) { 
+                    specificLampAAndSysIndexGetRefDocBAndCallRefDOMOpObjInTypeOpA.classList.add('lamp-on');
+                }else { specificLampAAndSysIndexGetRefDocBAndCallRefDOMOpObjInTypeOpA.classList.remove('lamp-on');}
+             }
+        }
+
+        window.addEventListener('resize', ()=> { 
+            TheMainScreenVisionViewCameraEngineObjectBaseToSeeVTypeObjTTargetTheTypePointAObjView.aspect = window.innerWidth / window.innerHeight; 
+            TheMainScreenVisionViewCameraEngineObjectBaseToSeeVTypeObjTTargetTheTypePointAObjView.updateProjectionMatrix(); 
+            worldFrameGenRendererCanvasCoreXOp.setSize( window.innerWidth, window.innerHeight );
+        }, false);
+        
+
+        // 按钮挂拦截器：!! ========= : ===-= !!!! ==  :!!!!== !
+        document.getElementById('ctrl-shape').addEventListener('click', ()=> {
+            stateGlobalModelIndex = (stateGlobalModelIndex + 1) % GRAPH_ARCHIVES.length;
+            CallCalculationSysToWriteDestinyMorphPointsByGivenTypeKeyNumStateGenValLogicCallerFunDoRPointCArrayMArrayCall(stateGlobalModelIndex);
+        });
+
+        // 这个 Spin 断定在第一极！完美处理不动锁与运动悬切盘!!! =========== :: == = !!!---- ===== !!!!-=== !!!  !!! ====== ！！！ == --！-= ！ -=！！：- ===-= !!!!=======----::::= - - ---= :: -- =-- :: -----! ! ---- ===== -- ! =======:: ====== !!!!======== ! --  - ==== !!!!! -= !!!-- !!=== ====== ---====== ======== !!!!! ==
+        const ODOMAutoSSysCallRActButtonHStateOpGDOMBControlAndRunCallValRefValueAAndUIForAndValueBForThisHObjectTypePTo= document.getElementById('ctrl-spin');
+        ODOMAutoSSysCallRActButtonHStateOpGDOMBControlAndRunCallValRefValueAAndUIForAndValueBForThisHObjectTypePTo.addEventListener('click', ()=>{ 
+            engineIsAutoSpinOn= !engineIsAutoSpinOn;
+            if(engineIsAutoSpinOn){
+                ODOMAutoSSysCallRActButtonHStateOpGDOMBControlAndRunCallValRefValueAAndUIForAndValueBForThisHObjectTypePTo.innerText="Auto Spin: ON"; ODOMAutoSSysCallRActButtonHStateOpGDOMBControlAndRunCallValRefValueAAndUIForAndValueBForThisHObjectTypePTo.classList.add('active-mode'); 
+            }else{ 
+                ODOMAutoSSysCallRActButtonHStateOpGDOMBControlAndRunCallValRefValueAAndUIForAndValueBForThisHObjectTypePTo.innerText="Auto Spin: OFF"; ODOMAutoSSysCallRActButtonHStateOpGDOMBControlAndRunCallValRefValueAAndUIForAndValueBForThisHObjectTypePTo.classList.remove('active-mode');  
+            }
+        });
+        
+        document.getElementById('ctrl-view').addEventListener('click', ()=>{
+             TheMainScreenVisionViewCameraEngineObjectBaseToSeeVTypeObjTTargetTheTypePointAObjView.position.set(0, 48, 260); 
+             DragPanMouseKeyboardVisionWatchSysUserOperateCamOrbitRefObjInstCtT.target.set(0,0,0); 
+        });
+
+        BuildTheInitialBasicMathModelArrayHolderFrameWorkGraphicsObjectMeshGeometriesBase(); 
+        TheInfiniteCycleGodMainAnimationSystemClockTriggerRunMethodHookOpMainRunLogicHookForC(); 
+
+    </script>
+</body>
+</html>
